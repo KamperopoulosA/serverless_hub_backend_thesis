@@ -62,16 +62,63 @@ public class UserManagementService {
      * Login existing user and issue JWT + Refresh token
      */
     public ReqRes login(ReqRes loginRequest) {
+
         ReqRes response = new ReqRes();
+
         try {
+
+            // 1️⃣ Check if user exists
+            OurUsers user = usersRepo.findByEmail(loginRequest.getEmail()).orElse(null);
+
+            if (user == null) {
+                response.setStatusCode(401);
+                response.setMessage("Email not found");
+                return response;
+            }
+
+            // 2️⃣ Check if account is disabled
+            if (!user.isEnabled()) {
+                response.setStatusCode(403);
+                response.setMessage("Account locked after 3 failed login attempts. Contact administrator.");
+                return response;
+            }
+
+            // 3️⃣ Validate password
+            if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
+
+                int attempts = user.getFailedLoginAttempts() + 1;
+                user.setFailedLoginAttempts(attempts);
+
+                // Lock account after 3 failed attempts
+                if (attempts >= 3) {
+                    user.setActive(false);
+                    usersRepo.save(user);
+
+                    response.setStatusCode(403);
+                    response.setMessage("Account locked after 3 failed login attempts. Contact administrator.");
+                    return response;
+                }
+
+                usersRepo.save(user);
+
+                response.setStatusCode(401);
+                response.setMessage("Invalid password. Attempt " + attempts + " of 3.");
+                return response;
+            }
+
+            // 4️⃣ Password correct → reset attempts
+            user.setFailedLoginAttempts(0);
+            usersRepo.save(user);
+
+            // 5️⃣ Authenticate officially
             authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword())
+                    new UsernamePasswordAuthenticationToken(
+                            loginRequest.getEmail(),
+                            loginRequest.getPassword()
+                    )
             );
 
-            OurUsers user = usersRepo.findByEmail(loginRequest.getEmail())
-                    .orElseThrow(() -> new RuntimeException("User not found"));
-
-            // ✅ Generate JWT and Refresh tokens with proper expiration
+            // 6️⃣ Generate tokens
             String jwt = jwtUtils.generateToken(user);
             String refreshToken = jwtUtils.generateRefreshToken(new HashMap<>(), user);
 
@@ -80,12 +127,18 @@ public class UserManagementService {
             response.setRefreshToken(refreshToken);
             response.setExpirationTime("1 hour");
             response.setMessage("Login successful");
+
+            return response;
+
         } catch (Exception e) {
+
             response.setStatusCode(401);
-            response.setMessage("Invalid credentials: " + e.getMessage());
+            response.setMessage("Login failed: " + e.getMessage());
+            return response;
         }
-        return response;
     }
+
+
 
     /**
      * Refresh JWT token
@@ -230,4 +283,70 @@ public class UserManagementService {
         }
         return reqRes;
     }
+
+    public ReqRes toggleActive(Integer id) {
+        ReqRes res = new ReqRes();
+        OurUsers user = usersRepo.findById(id).orElseThrow();
+        user.setActive(!user.getActive());
+        usersRepo.save(user);
+        res.setMessage("User " + (user.getActive() ? "activated" : "disabled"));
+        return res;
+    }
+
+    public ReqRes updateMyProfile(String emailFromToken, ReqRes updateRequest) {
+        ReqRes res = new ReqRes();
+        try {
+            OurUsers user = usersRepo.findByEmail(emailFromToken)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            // 1) Update βασικών στοιχείων
+            if (updateRequest.getName() != null && !updateRequest.getName().isEmpty()) {
+                user.setName(updateRequest.getName());
+            }
+
+            if (updateRequest.getCity() != null && !updateRequest.getCity().isEmpty()) {
+                user.setCity(updateRequest.getCity());
+            }
+
+            if (updateRequest.getEmail() != null && !updateRequest.getEmail().isEmpty()
+                    && !updateRequest.getEmail().equalsIgnoreCase(user.getEmail())) {
+                // εδώ ιδανικά κάνεις και check για unique email
+                user.setEmail(updateRequest.getEmail());
+            }
+
+            // 2) Αλλαγή password (προαιρετική)
+            if (updateRequest.getNewPassword() != null && !updateRequest.getNewPassword().isEmpty()) {
+
+                // πρέπει να δώσει currentPassword
+                if (updateRequest.getCurrentPassword() == null ||
+                        updateRequest.getCurrentPassword().isEmpty()) {
+                    res.setStatusCode(400);
+                    res.setMessage("Current password is required to change password");
+                    return res;
+                }
+
+                // έλεγχος ότι το currentPassword είναι σωστό
+                if (!passwordEncoder.matches(updateRequest.getCurrentPassword(), user.getPassword())) {
+                    res.setStatusCode(400);
+                    res.setMessage("Current password is incorrect");
+                    return res;
+                }
+
+                // όλα καλά → κάνουμε encode τον νέο κωδικό
+                user.setPassword(passwordEncoder.encode(updateRequest.getNewPassword()));
+            }
+
+            usersRepo.save(user);
+
+            res.setStatusCode(200);
+            res.setMessage("Profile updated successfully");
+            res.setOurUsers(user); // αν αυτό είναι το field στο ReqRes
+        } catch (Exception e) {
+            res.setStatusCode(500);
+            res.setMessage("Error updating profile: " + e.getMessage());
+        }
+        return res;
+    }
+
+
 }

@@ -10,7 +10,7 @@ public class PlatformFeaturesConverter {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public PlatformFeatures convertJsonToFeatures(JsonNode featuresJson) {
+/*    public PlatformFeatures convertJsonToFeatures(JsonNode featuresJson) {
         PlatformFeatures features = new PlatformFeatures();
         if (featuresJson == null) return features;
 
@@ -19,5 +19,5 @@ public class PlatformFeaturesConverter {
         });
 
         return features;
-    }
+    }*/
 }

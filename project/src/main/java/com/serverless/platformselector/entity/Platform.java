@@ -1,6 +1,7 @@
 package com.serverless.platformselector.entity;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.serverless.platformselector.util.PlatformFeatureValidator;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -66,7 +67,11 @@ public class Platform {
     public void setCategory(String category) { this.category = category; }
     
     public JsonNode getFeaturesJson() { return featuresJson; }
-    public void setFeaturesJson(JsonNode featuresJson) { this.featuresJson = featuresJson; }
+
+    public void setFeaturesJson(JsonNode featuresJson) {
+        PlatformFeatureValidator.validateFeatures(featuresJson);
+        this.featuresJson = featuresJson;
+    }
     
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
@@ -81,4 +86,5 @@ public class Platform {
     public void setFeatures(PlatformFeatures features) {
         this.features = features;
     }
+
 }

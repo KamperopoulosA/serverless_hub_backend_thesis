@@ -63,5 +63,14 @@ public class UserManagementController {
         return ResponseEntity.ok(userManagementService.deleteUser(userId));
 
     }
+
+    @PutMapping("/profile")
+    public ResponseEntity<ReqRes> updateMyProfile(@RequestBody ReqRes req) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication.getName(); // email από JWT
+
+        ReqRes response = userManagementService.updateMyProfile(email, req);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
 }
 

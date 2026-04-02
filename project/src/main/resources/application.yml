@@ -50,3 +50,18 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
     enabled: true
+
+#spring boot actuator configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+
+  tracing:
+    enabled: true
+    sampling:
+      probability: 1.0

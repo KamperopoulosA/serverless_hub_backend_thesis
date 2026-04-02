@@ -14,7 +14,9 @@ import java.util.UUID;
 public interface DeploymentRecordRepository extends JpaRepository<DeploymentRecord, UUID> {
     
     List<DeploymentRecord> findByUserId(UUID userId);
-    
+
+    //List<DeploymentRecord> findByUserId(String userId);
+
     Page<DeploymentRecord> findByUserId(UUID userId, Pageable pageable);
     
     List<DeploymentRecord> findByUserIdAndDeploymentStatus(UUID userId, DeploymentStatus status);

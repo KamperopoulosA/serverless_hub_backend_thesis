@@ -26,6 +26,8 @@ public class ReqRes {
     private String password;
     private OurUsers ourUsers;
     private List<OurUsers> ourUsersList;
+    private String currentPassword;
+    private String newPassword;
 
     public int getStatusCode() {
         return statusCode;

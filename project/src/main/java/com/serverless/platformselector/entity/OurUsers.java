@@ -2,7 +2,8 @@ package com.serverless.platformselector.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -12,96 +13,63 @@ import java.util.List;
 
 @Entity
 @Table(name = "ourusers")
-@Data
+@Getter
+@Setter
 public class OurUsers implements UserDetails {
 
     @Id
-    @GeneratedValue(strategy =  GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
+
     private String email;
     private String name;
+
+    @JsonIgnore
     private String password;
+
     private String city;
-    private String role;
+
+    private String role; // stored as ADMIN or USER in DB
+
+    private Boolean active = true;
 
     @Override
     @JsonIgnore
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority(role));
+        // Convert DB role → Spring Security role
+        return List.of(new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()));
     }
 
     @Override
+    @JsonIgnore
     public String getUsername() {
         return email;
     }
 
-    // ✅ Explicitly override required by UserDetails
     @Override
-    public String getPassword() {
-        return password;
-    }
-
-    @Override
+    @JsonIgnore
     public boolean isAccountNonExpired() {
-        return true; // or apply your own logic
+        return true;
     }
 
     @Override
+    @JsonIgnore
     public boolean isAccountNonLocked() {
-        return true; // or apply your own logic
+        return true;
     }
 
     @Override
+    @JsonIgnore
     public boolean isCredentialsNonExpired() {
-        return true; // or apply your own logic
+        return true;
     }
 
     @Override
+    @JsonIgnore
     public boolean isEnabled() {
-        return true; // or apply your own logic
+        return active;
     }
 
-    public Integer getId() {
-        return id;
-    }
-
-    public void setId(Integer id) {
-        this.id = id;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
-    public String getCity() {
-        return city;
-    }
-
-    public void setCity(String city) {
-        this.city = city;
-    }
-
-    public String getRole() {
-        return role;
-    }
-
-    public void setRole(String role) {
-        this.role = role;
-    }
+    @Column(name = "failed_login_attempts")
+    private int failedLoginAttempts = 0;
 }

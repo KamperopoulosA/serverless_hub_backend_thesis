@@ -9,16 +9,15 @@ import com.serverless.platformselector.entity.PlatformFeatures;
 import com.serverless.platformselector.exception.ResourceNotFoundException;
 import com.serverless.platformselector.mapper.PlatformWithRankRowMapper;
 import com.serverless.platformselector.repository.PlatformRepository;
-import com.serverless.platformselector.specifications.PlatformSpecifications;
 import com.serverless.platformselector.util.PlatformRankingUtil;
 import com.serverless.platformselector.util.PlatformType;
 import com.serverless.platformselector.util.PlatformWeightsConfig;
+import io.micrometer.tracing.annotation.SpanTag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -197,7 +196,9 @@ public class PlatformService {
         FROM platforms p
         WHERE (:keyword = '' OR
                to_tsvector('english', coalesce(p.name, '') || ' ' || coalesce(p.description, '') || ' ' || coalesce(p.category, ''))
-               @@ plainto_tsquery('english', :keyword))
+               @@ plainto_tsquery('english', :keyword)
+               OR similarity(p.name, :keyword) > 0.25)
+               
         """);
 
         MapSqlParameterSource params = new MapSqlParameterSource();
@@ -262,57 +263,31 @@ public class PlatformService {
         return platformRepository.findNameSuggestions(prefix);
     }
 
-    private double computeCriterionScore(JsonNode featuresJson, Criterion criterion) {
-        String critName = criterion.getName();
-        String type = criterion.getType();
-        String direction = criterion.getDirection();
 
-        JsonNode valueNode = featuresJson.get(critName);
-        if (valueNode == null) {
-            return 0.0; // ή άλλη λογική
-        }
-
-        if ("numeric".equalsIgnoreCase(type)) {
-            double value = valueNode.asDouble();
-            double min = criterion.getMinValue() != null ? criterion.getMinValue() : 0.0;
-            double max = criterion.getMaxValue() != null ? criterion.getMaxValue() : 1.0;
-            if ("positive".equalsIgnoreCase(direction)) {
-                if (max == min) return 1.0;
-                return (value - min) / (max - min);
-            } else if ("negative".equalsIgnoreCase(direction)) {
-                if (max == min) return 1.0;
-                return (max - value) / (max - min);
-            }
-        } else if ("categorical".equalsIgnoreCase(type)) {
-            // Υποθέτω ordered list κατηγορικών τιμών
-            int index = criterion.getCategoricalValues().indexOf(valueNode.asText());
-            if (index < 0) return 0.0;
-            int maxIndex = criterion.getCategoricalValues().size() - 1;
-            return ((double) index + 1) / (maxIndex + 1);
-        }
-        // Μπορείς να επεκτείνεις με άλλους τύπους...
-
-        return 0.0;
-    }
 
     public List<PlatformDTO> rankPlatformsByPerformanceCriteria(
             List<Platform> platforms,
-            List<CriterionRequestDTO> criteria,
-            PlatformType platformType) {
-
-        Map<String, Double> weights = PlatformWeightsConfig.getWeightsForPlatform(platformType);
+            List<CriterionRequestDTO> criteria) {
 
         return platforms.stream()
                 .map(platform -> {
-                    platform.setFeatures(convertJsonToFeatures(platform.getFeaturesJson()));
-                    double score = PlatformRankingUtil.calculateScore(criteria, weights);
+                    // Μετατροπή JSON → PlatformFeatures (normalized)
+                    PlatformFeatures features = normalizeFeatures(
+                            convertJsonToFeatures(platform.getFeaturesJson())
+                    );
+                    platform.setFeatures(features);
+
+                    double score = PlatformRankingUtil.calculateScore(platform, platforms, criteria);
+
                     PlatformDTO dto = convertToDTO(platform);
                     dto.setTotalScore(score);
                     return dto;
                 })
-                .sorted((d1, d2) -> Double.compare(d2.getTotalScore(), d1.getTotalScore()))
+                .sorted(Comparator.comparingDouble(PlatformDTO::getTotalScore).reversed())
                 .collect(Collectors.toList());
     }
+
+
 
 
 
@@ -329,18 +304,21 @@ public class PlatformService {
         List<PlatformRankingResult> results = new ArrayList<>();
 
         for (PlatformType platformType : PlatformType.values()) {
-            // Φιλτράρω τις πλατφόρμες για το συγκεκριμένο τύπο
+
+            // Φιλτράρουμε τις πλατφόρμες ανά TYPΟ / CATEGORY, ΟΧΙ με βάση το όνομα
             List<Platform> filteredPlatforms = platforms.stream()
-                    .filter(p -> p.getName().equals(platformType.name()))
+                    .filter(p -> p.getName() != null &&
+                            p.getName().equalsIgnoreCase(platformType.name()))
                     .collect(Collectors.toList());
 
-            // Παίρνω τα weights για το συγκεκριμένο platformType
-            Map<String, Double> weights = PlatformWeightsConfig.getWeightsForPlatform(platformType);
+            if (filteredPlatforms.isEmpty()) {
+                continue; // αν δεν έχουμε καμία πλατφόρμα αυτού του τύπου, προχώρα στον επόμενο
+            }
 
-            // Κάνω το ranking με βάση τα κριτήρια και τα βάρη
-            List<PlatformDTO> rankedPlatforms = rankPlatformsByPerformanceCriteria(filteredPlatforms, criteria, platformType);
+            // Κάνουμε ranking με βάση τα criteria & τα weights που δίνει ο χρήστης
+            List<PlatformDTO> rankedPlatforms =
+                    rankPlatformsByPerformanceCriteria(filteredPlatforms, criteria);
 
-            // Δημιουργώ ένα DTO που κρατά το platformType + rankedPlatforms
             PlatformRankingResult result = new PlatformRankingResult();
             result.setPlatformType(platformType);
             result.setRankedPlatforms(rankedPlatforms);
@@ -352,16 +330,67 @@ public class PlatformService {
     }
 
 
-    private PlatformFeatures convertJsonToFeatures(JsonNode featuresJson) {
-        PlatformFeatures features = new PlatformFeatures();
-        if (featuresJson == null) return features;
 
-        featuresJson.fields().forEachRemaining(entry -> {
-            features.put(entry.getKey(), entry.getValue().asText());
+
+    private PlatformFeatures convertJsonToFeatures(JsonNode json) {
+
+        PlatformFeatures features = new PlatformFeatures();
+
+        if (json == null || json.isNull()) return features;
+
+        json.fields().forEachRemaining(entry -> {
+            String key = entry.getKey();
+            JsonNode valueNode = entry.getValue();
+
+            Object value;
+
+            if (valueNode.isNumber()) {
+                value = valueNode.numberValue();
+            }
+            else if (valueNode.isArray()) {
+                List<String> list = new ArrayList<>();
+                valueNode.forEach(v -> list.add(v.asText()));
+                value = list;
+            }
+            else {
+                value = valueNode.asText();
+            }
+
+            features.addFeature(key, value);
         });
 
         return features;
     }
+
+
+    private PlatformFeatures normalizeFeatures(PlatformFeatures raw) {
+
+        PlatformFeatures normalized = new PlatformFeatures();
+
+        if (raw == null || raw.toMap().isEmpty()) {
+            return normalized;
+        }
+
+        raw.toMap().forEach((key, value) -> {
+
+            if (value instanceof String) {
+                normalized.addFeature(key.toLowerCase(), ((String) value).trim());
+            }
+            else if (value instanceof Number) {
+                normalized.addFeature(key.toLowerCase(), value);
+            }
+            else if (value instanceof List) {
+                normalized.addFeature(key.toLowerCase(), value);
+            }
+            else {
+                normalized.addFeature(key.toLowerCase(), value.toString());
+            }
+
+        });
+
+        return normalized;
+    }
+
 
 
 }
