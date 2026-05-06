@@ -77,14 +77,14 @@ The application follows Clean Architecture principles with clear separation of c
 ### Database Setup
 1. Create PostgreSQL database:
 ```sql
-CREATE DATABASE serverless_platform_db;
+CREATE DATABASE serverless_platform_worker_db;
 ```
 
 2. Update `application.yml` with your database credentials:
 ```yaml
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/serverless_platform_db
+    url: jdbc:postgresql://localhost:5432/serverless_platform_worker_db
     username: your_username
     password: your_password
 ```

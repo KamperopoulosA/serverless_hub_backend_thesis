@@ -1,0 +1,18 @@
+server:
+  port: 0
+
+spring:
+  application:
+    name: serverless-platform-selector-worker
+
+app:
+  observability:
+    service-name: ${OBSERVABILITY_SERVICE_NAME:serverless-platform-selector-worker}
+  deployment:
+    worker:
+      enabled: true
+      worker-id: ${DEPLOYMENT_WORKER_ID:worker-node}
+
+logging:
+  level:
+    com.serverless.platformselector.service.DeploymentWorkerService: INFO

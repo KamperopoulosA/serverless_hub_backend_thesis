@@ -37,7 +37,7 @@ public class OurUsers implements UserDetails {
     @JsonIgnore
     public Collection<? extends GrantedAuthority> getAuthorities() {
         // Convert DB role → Spring Security role
-        return List.of(new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()));
+        return List.of(new SimpleGrantedAuthority(role.toUpperCase()));
     }
 
     @Override

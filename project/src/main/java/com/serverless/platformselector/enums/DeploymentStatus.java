@@ -1,7 +1,8 @@
 package com.serverless.platformselector.enums;
 
 public enum DeploymentStatus {
-    PENDING,
+    QUEUED,
+    RUNNING,
     SUCCESS,
     FAILED
 }

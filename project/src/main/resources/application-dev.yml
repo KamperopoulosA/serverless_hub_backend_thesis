@@ -1,16 +1,17 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/serverless_platform_dev_db
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/serverless_platform_worker_dev_db}
     username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:password}
-    
+    password: ${DB_PASSWORD:postgres}
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: update
     show-sql: true
-    
+
 logging:
   level:
     com.serverless.platformselector: DEBUG
     org.springframework.web: DEBUG
     org.hibernate.SQL: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} requestId=%X{requestId:-na} traceId=%X{traceId:-na} spanId=%X{spanId:-na} deploymentId=%X{deploymentId:-na} workerId=%X{workerId:-na} provider=%X{provider:-na} - %msg%n"

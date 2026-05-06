@@ -1,43 +1,14 @@
-/*
 package com.serverless.platformselector.config;
 
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import org.slf4j.MDC;
-import org.springframework.stereotype.Component;
-import org.springframework.web.filter.OncePerRequestFilter;
+public final class CorrelationIdFilter {
 
-import java.io.IOException;
-import java.util.UUID;
+    public static final String REQUEST_ID_MDC_KEY = "requestId";
+    public static final String TRACE_ID_MDC_KEY = "traceId";
+    public static final String SPAN_ID_MDC_KEY = "spanId";
+    public static final String DEPLOYMENT_ID_MDC_KEY = "deploymentId";
+    public static final String WORKER_ID_MDC_KEY = "workerId";
+    public static final String PROVIDER_MDC_KEY = "provider";
 
-@Component
-public class CorrelationIdFilter extends OncePerRequestFilter {
-
-    public static final String HEADER_NAME = "X-Span-Id";
-    public static final String MDC_KEY = "spanId";
-
-    @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain)
-            throws ServletException, IOException {
-
-        // αν ο client στείλει X-Span-Id, το κρατάμε
-        String spanId = request.getHeader(HEADER_NAME);
-        if (spanId == null || spanId.isEmpty()) {
-            spanId = UUID.randomUUID().toString().replace("-", "");
-        }
-
-        MDC.put(MDC_KEY, spanId);
-        response.setHeader(HEADER_NAME, spanId);
-
-        try {
-            filterChain.doFilter(request, response);
-        } finally {
-            MDC.remove(MDC_KEY);
-        }
+    private CorrelationIdFilter() {
     }
 }
-*/

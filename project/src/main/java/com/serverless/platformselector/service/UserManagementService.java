@@ -127,6 +127,7 @@ public class UserManagementService {
             response.setRefreshToken(refreshToken);
             response.setExpirationTime("1 hour");
             response.setMessage("Login successful");
+            response.setOurUsers(user);
 
             return response;
 

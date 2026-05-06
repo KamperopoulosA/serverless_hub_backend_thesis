@@ -1,6 +1,7 @@
 package com.serverless.platformselector.dto;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.serverless.platformselector.enums.CloudProvider;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 @Schema(description = "DTO for updating an existing platform")
@@ -14,6 +15,9 @@ public class PlatformUpdateDTO {
     
     @Schema(description = "Platform category", example = "FaaS")
     private String category;
+
+    @Schema(description = "Cloud provider", example = "AWS")
+    private CloudProvider provider;
     
     @Schema(description = "Platform features and criteria in JSON format")
     private JsonNode featuresJson;
@@ -21,10 +25,11 @@ public class PlatformUpdateDTO {
     // Constructors
     public PlatformUpdateDTO() {}
     
-    public PlatformUpdateDTO(String name, String description, String category, JsonNode featuresJson) {
+    public PlatformUpdateDTO(String name, String description, String category, CloudProvider provider, JsonNode featuresJson) {
         this.name = name;
         this.description = description;
         this.category = category;
+        this.provider = provider;
         this.featuresJson = featuresJson;
     }
     
@@ -37,6 +42,9 @@ public class PlatformUpdateDTO {
     
     public String getCategory() { return category; }
     public void setCategory(String category) { this.category = category; }
+
+    public CloudProvider getProvider() { return provider; }
+    public void setProvider(CloudProvider provider) { this.provider = provider; }
     
     public JsonNode getFeaturesJson() { return featuresJson; }
     public void setFeaturesJson(JsonNode featuresJson) { this.featuresJson = featuresJson; }

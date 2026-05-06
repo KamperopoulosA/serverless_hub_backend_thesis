@@ -49,23 +49,24 @@ public class SecurityConfig {
 
                         // ✅ Actuator & observability
                         .requestMatchers("/actuator/**").permitAll()
-                        .requestMatchers("/api/observability/**").permitAll()
+                        .requestMatchers("/api/observability/summary").hasAuthority("ADMIN")
                         // ✅ Allow platform GET endpoints
                         .requestMatchers("/api/platforms", "/api/platforms/", "/api/platforms/{id}", "/api/platforms/search/**", "/api/platforms/autocomplete", "/api/platforms/rank")
                         .permitAll()
 
                         // ✅ Allow deployments
-                        .requestMatchers("/api/deployments").permitAll()
+                        .requestMatchers("/api/deployments").authenticated()
+                        .requestMatchers("/api/deployments/**").authenticated()
 
                         // ✅ Restrict platform creation/update/delete to ADMIN
-                        .requestMatchers("/api/platforms/**").hasRole("ADMIN")
+                        .requestMatchers("/api/platforms/**").hasAuthority("ADMIN")
 
                         // Other routes
-                        .requestMatchers("/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/user/**").hasRole("USER")
-                        .requestMatchers("/adminuser/**").hasAnyRole("ADMIN", "USER")
+                        .requestMatchers("/admin/**").hasAuthority("ADMIN")
+                        .requestMatchers("/user/**").authenticated()
+                        .requestMatchers("/adminuser/**").authenticated()
                         .requestMatchers("/api/admin/**").hasAuthority("ADMIN")
-                        .requestMatchers("/api/user/deployments/").permitAll()
+                        .requestMatchers("/api/user/deployments/**").authenticated()
                         // ✅ everything else must be authenticated
                         .anyRequest().authenticated()
                 )

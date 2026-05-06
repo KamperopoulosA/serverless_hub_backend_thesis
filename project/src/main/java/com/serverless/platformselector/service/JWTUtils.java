@@ -4,6 +4,7 @@ import com.serverless.platformselector.entity.OurUsers;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
@@ -26,9 +27,13 @@ public class JWTUtils {
     // Refresh token: 7 days
     private static final long REFRESH_EXPIRATION = 1000L * 60 * 60 * 24 * 7;
 
-    public JWTUtils() {
-        String secretString = "pJ2k8gkO8lsmVFl7qk9H1D7UydXnQ1nB5QFQ9bY3n5A=";
-        byte[] keyBytes = Base64.getDecoder().decode(secretString.getBytes(StandardCharsets.UTF_8));
+    public JWTUtils(@Value("${app.jwt.secret-key}") String secretString) {
+        byte[] keyBytes;
+        try {
+            keyBytes = Base64.getDecoder().decode(secretString);
+        } catch (IllegalArgumentException ex) {
+            keyBytes = secretString.getBytes(StandardCharsets.UTF_8);
+        }
         this.key = new SecretKeySpec(keyBytes, "HmacSHA256");
     }
 
@@ -36,6 +41,8 @@ public class JWTUtils {
     public String generateToken(OurUsers user) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("role", user.getRole());
+        claims.put("userId", user.getId());
+        claims.put("name", user.getName());
         return Jwts.builder()
                 .claims(claims)
                 .subject(user.getEmail())

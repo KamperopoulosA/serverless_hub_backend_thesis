@@ -3,6 +3,7 @@ package com.serverless.platformselector.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.serverless.platformselector.dto.*;
+import com.serverless.platformselector.enums.CloudProvider;
 import com.serverless.platformselector.entity.Criterion;
 import com.serverless.platformselector.entity.Platform;
 import com.serverless.platformselector.entity.PlatformFeatures;
@@ -10,7 +11,6 @@ import com.serverless.platformselector.exception.ResourceNotFoundException;
 import com.serverless.platformselector.mapper.PlatformWithRankRowMapper;
 import com.serverless.platformselector.repository.PlatformRepository;
 import com.serverless.platformselector.util.PlatformRankingUtil;
-import com.serverless.platformselector.util.PlatformType;
 import com.serverless.platformselector.util.PlatformWeightsConfig;
 import io.micrometer.tracing.annotation.SpanTag;
 import org.slf4j.Logger;
@@ -65,6 +65,7 @@ public class PlatformService {
         platform.setName(createDTO.getName());
         platform.setDescription(createDTO.getDescription());
         platform.setCategory(createDTO.getCategory());
+        platform.setProvider(createDTO.getProvider());
         platform.setFeaturesJson(createDTO.getFeaturesJson());
         
         Platform savedPlatform = platformRepository.save(platform);
@@ -87,6 +88,9 @@ public class PlatformService {
         }
         if (updateDTO.getCategory() != null) {
             platform.setCategory(updateDTO.getCategory());
+        }
+        if (updateDTO.getProvider() != null) {
+            platform.setProvider(updateDTO.getProvider());
         }
         if (updateDTO.getFeaturesJson() != null) {
             platform.setFeaturesJson(updateDTO.getFeaturesJson());
@@ -162,6 +166,7 @@ public class PlatformService {
             platform.getName(),
             platform.getDescription(),
             platform.getCategory(),
+            platform.getProvider(),
             platform.getFeaturesJson(),
             platform.getCreatedAt(),
             platform.getUpdatedAt()
@@ -303,12 +308,11 @@ public class PlatformService {
 
         List<PlatformRankingResult> results = new ArrayList<>();
 
-        for (PlatformType platformType : PlatformType.values()) {
+        for (CloudProvider platformType : CloudProvider.values()) {
 
             // Φιλτράρουμε τις πλατφόρμες ανά TYPΟ / CATEGORY, ΟΧΙ με βάση το όνομα
             List<Platform> filteredPlatforms = platforms.stream()
-                    .filter(p -> p.getName() != null &&
-                            p.getName().equalsIgnoreCase(platformType.name()))
+                    .filter(p -> p.getProvider() == platformType)
                     .collect(Collectors.toList());
 
             if (filteredPlatforms.isEmpty()) {

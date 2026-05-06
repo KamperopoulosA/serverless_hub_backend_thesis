@@ -6,13 +6,11 @@ server:
 spring:
   application:
     name: serverless-platform-selector-api
-  
   datasource:
-    url: jdbc:postgresql://localhost:5432/serverless_platform_db
-    username: postgres
-    password: postgres
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/serverless_platform_worker_db}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
-    
   jpa:
     hibernate:
       ddl-auto: update
@@ -21,29 +19,43 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
-        
   jackson:
     serialization:
       write-dates-as-timestamps: false
     time-zone: UTC
 
-# Application specific properties
 app:
+  jwt:
+    secret-key: ${JWT_SECRET_KEY:local-dev-jwt-secret-key-123456789012345678901234567890}
   encryption:
-    secret-key: 12345678901234567890123456789012
+    secret-key: ${ENCRYPTION_SECRET_KEY:12345678901234567890123456789012}
+  observability:
+    request-id-header-name: ${OBSERVABILITY_REQUEST_ID_HEADER_NAME:X-Request-Id}
+    worker-heartbeat-stale-after-seconds: ${OBSERVABILITY_WORKER_HEARTBEAT_STALE_AFTER_SECONDS:30}
+    service-name: ${OBSERVABILITY_SERVICE_NAME:serverless-platform-selector-api}
+  deployment:
+    artifacts-root: ${DEPLOYMENT_ARTIFACTS_ROOT:./deployment-artifacts}
+    max-artifact-size-bytes: ${DEPLOYMENT_MAX_ARTIFACT_SIZE_BYTES:26214400}
+    job-timeout-seconds: ${DEPLOYMENT_JOB_TIMEOUT_SECONDS:600}
+    log-max-bytes: ${DEPLOYMENT_LOG_MAX_BYTES:102400}
+    supported-providers:
+      - AWS
+      - GCP
+    worker:
+      enabled: ${DEPLOYMENT_WORKER_ENABLED:false}
+      poll-interval-ms: ${DEPLOYMENT_WORKER_POLL_INTERVAL_MS:5000}
+      worker-id: ${DEPLOYMENT_WORKER_ID:api-node}
 
-# Logging configuration
 logging:
   level:
     com.serverless.platformselector: INFO
-    org.springframework.: DEBUG
-    org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.springframework: INFO
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} requestId=%X{requestId:-na} traceId=%X{traceId:-na} spanId=%X{spanId:-na} deploymentId=%X{deploymentId:-na} workerId=%X{workerId:-na} provider=%X{provider:-na} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} requestId=%X{requestId:-na} traceId=%X{traceId:-na} spanId=%X{spanId:-na} deploymentId=%X{deploymentId:-na} workerId=%X{workerId:-na} provider=%X{provider:-na} - %msg%n"
 
-# Swagger/OpenAPI configuration
 springdoc:
   api-docs:
     path: /api-docs
@@ -51,7 +63,6 @@ springdoc:
     path: /swagger-ui.html
     enabled: true
 
-#spring boot actuator configuration
 management:
   endpoints:
     web:
@@ -60,7 +71,6 @@ management:
   endpoint:
     health:
       show-details: always
-
   tracing:
     enabled: true
     sampling:

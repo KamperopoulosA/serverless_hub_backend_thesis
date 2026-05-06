@@ -1,41 +1,37 @@
 package com.serverless.platformselector.service;
 
 import com.serverless.platformselector.dto.DeploymentRecordDTO;
-import com.serverless.platformselector.entity.DeploymentRecord;
+import com.serverless.platformselector.entity.OurUsers;
 import com.serverless.platformselector.repository.DeploymentRecordRepository;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.UUID;
 
 @Service
 public class UserDeploymentService {
 
     private final DeploymentRecordRepository deploymentRecordRepository;
+    private final AuthenticatedUserService authenticatedUserService;
+    private final DeploymentDtoMapper deploymentDtoMapper;
 
-    public UserDeploymentService(DeploymentRecordRepository deploymentRecordRepository) {
+    public UserDeploymentService(
+            DeploymentRecordRepository deploymentRecordRepository,
+            AuthenticatedUserService authenticatedUserService,
+            DeploymentDtoMapper deploymentDtoMapper) {
         this.deploymentRecordRepository = deploymentRecordRepository;
+        this.authenticatedUserService = authenticatedUserService;
+        this.deploymentDtoMapper = deploymentDtoMapper;
     }
 
+    @Transactional(readOnly = true)
+    public List<DeploymentRecordDTO> getDeploymentsForCurrentUser(Authentication authentication) {
+        OurUsers user = authenticatedUserService.requireCurrentUser(authentication);
 
-    public List<DeploymentRecordDTO> getDeploymentsForUser(UUID userId) {
-        return deploymentRecordRepository.findByUserId(userId)
-                .stream()
-                .map(this::toDto)
-                .toList();
-    }
-
-    private DeploymentRecordDTO toDto(DeploymentRecord record) {
-        DeploymentRecordDTO dto = new DeploymentRecordDTO();
-        dto.setId(record.getId());
-        dto.setUserId(record.getUserId());
-        dto.setPlatformName(
-                record.getPlatform() != null ? record.getPlatform().getName() : null
-        );
-        dto.setFunctionName(record.getFunctionName());
-        dto.setStatus(record.getDeploymentStatus());
-        dto.setEndpointUrl(record.getEndpointUrl());
-        dto.setCreatedAt(record.getCreatedAt());
-        return dto;
+        return deploymentRecordRepository.findByOwnerUserIdOrderByCreatedAtDesc(user.getId())
+            .stream()
+            .map(deploymentDtoMapper::toRecordDto)
+            .toList();
     }
 }

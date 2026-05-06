@@ -1,6 +1,7 @@
 package com.serverless.platformselector.entity;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.serverless.platformselector.enums.CloudProvider;
 import com.serverless.platformselector.util.PlatformFeatureValidator;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -27,6 +28,10 @@ public class Platform {
     
     @Column(nullable = false)
     private String category;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private CloudProvider provider;
     
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "features_json", columnDefinition = "jsonb")
@@ -46,10 +51,11 @@ public class Platform {
     // Constructors
     public Platform() {}
     
-    public Platform(String name, String description, String category, JsonNode featuresJson) {
+    public Platform(String name, String description, String category, CloudProvider provider, JsonNode featuresJson) {
         this.name = name;
         this.description = description;
         this.category = category;
+        this.provider = provider;
         this.featuresJson = featuresJson;
     }
     
@@ -65,6 +71,9 @@ public class Platform {
     
     public String getCategory() { return category; }
     public void setCategory(String category) { this.category = category; }
+
+    public CloudProvider getProvider() { return provider; }
+    public void setProvider(CloudProvider provider) { this.provider = provider; }
     
     public JsonNode getFeaturesJson() { return featuresJson; }
 

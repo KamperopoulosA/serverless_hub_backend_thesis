@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.serverless.platformselector.dto.PlatformCreateDTO;
 import com.serverless.platformselector.dto.PlatformDTO;
 import com.serverless.platformselector.entity.Platform;
+import com.serverless.platformselector.enums.CloudProvider;
 import com.serverless.platformselector.exception.ResourceNotFoundException;
 import com.serverless.platformselector.repository.PlatformRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -46,6 +47,7 @@ class PlatformServiceTest {
         testPlatform.setName("AWS Lambda");
         testPlatform.setDescription("Amazon Web Services Lambda");
         testPlatform.setCategory("FaaS");
+        testPlatform.setProvider(CloudProvider.AWS);
         
         ObjectMapper mapper = new ObjectMapper();
         JsonNode featuresJson = mapper.readTree("{\"maxMemory\": 3008, \"timeout\": 900}");
@@ -105,6 +107,7 @@ class PlatformServiceTest {
             "Google Cloud Functions",
             "Google Cloud Functions",
             "FaaS",
+            CloudProvider.GCP,
             featuresJson
         );
         
@@ -113,6 +116,7 @@ class PlatformServiceTest {
         savedPlatform.setName(createDTO.getName());
         savedPlatform.setDescription(createDTO.getDescription());
         savedPlatform.setCategory(createDTO.getCategory());
+        savedPlatform.setProvider(createDTO.getProvider());
         savedPlatform.setFeaturesJson(createDTO.getFeaturesJson());
         
         when(platformRepository.save(any(Platform.class))).thenReturn(savedPlatform);

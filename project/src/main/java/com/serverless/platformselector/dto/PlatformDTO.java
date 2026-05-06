@@ -1,6 +1,7 @@
 package com.serverless.platformselector.dto;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.serverless.platformselector.enums.CloudProvider;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
@@ -26,6 +27,9 @@ public class PlatformDTO {
     
     @Schema(description = "Platform category", example = "FaaS")
     private String category;
+
+    @Schema(description = "Cloud provider", example = "AWS")
+    private CloudProvider provider;
     
     @Schema(description = "Platform features and criteria in JSON format")
     private JsonNode featuresJson;
@@ -41,12 +45,13 @@ public class PlatformDTO {
     // Constructors
     public PlatformDTO() {}
     
-    public PlatformDTO(UUID id, String name, String description, String category, 
+    public PlatformDTO(UUID id, String name, String description, String category, CloudProvider provider,
                       JsonNode featuresJson, LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
         this.name = name;
         this.description = description;
         this.category = category;
+        this.provider = provider;
         this.featuresJson = featuresJson;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;

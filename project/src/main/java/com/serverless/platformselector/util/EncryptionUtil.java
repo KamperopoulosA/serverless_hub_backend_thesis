@@ -18,7 +18,7 @@ public class EncryptionUtil {
     private static final String ALGORITHM = "AES";
     private static final String TRANSFORMATION = "AES";
     
-    @Value("${app.encryption.secret-key:mySecretKey12345}")
+    @Value("${app.encryption.secret-key}")
     private String secretKey;
     
     public String encrypt(String plainText) {

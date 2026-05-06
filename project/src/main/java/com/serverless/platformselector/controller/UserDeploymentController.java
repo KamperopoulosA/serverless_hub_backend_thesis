@@ -4,10 +4,11 @@ import com.serverless.platformselector.dto.DeploymentRecordDTO;
 import com.serverless.platformselector.service.UserDeploymentService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/user/deployments")
@@ -19,15 +20,8 @@ public class UserDeploymentController {
         this.userDeploymentService = userDeploymentService;
     }
 
-
     @GetMapping("/my")
     public ResponseEntity<List<DeploymentRecordDTO>> getMyDeployments(Authentication authentication) {
-
-        //
-        UUID userId = UUID.fromString("22222222-2222-2222-2222-222222222222"); //authentication.getName();
-
-
-        List<DeploymentRecordDTO> deployments = userDeploymentService.getDeploymentsForUser(userId);
-        return ResponseEntity.ok(deployments);
+        return ResponseEntity.ok(userDeploymentService.getDeploymentsForCurrentUser(authentication));
     }
 }

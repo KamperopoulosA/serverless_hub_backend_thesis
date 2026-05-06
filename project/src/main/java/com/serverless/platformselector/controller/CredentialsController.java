@@ -1,44 +1,53 @@
 package com.serverless.platformselector.controller;
 
-import com.serverless.platformselector.dto.UserCredentialDTO;
-import com.serverless.platformselector.service.UserCredentialsService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.tags.Tag;
+import com.serverless.platformselector.dto.ProviderCredentialsRequestDTO;
+import com.serverless.platformselector.entity.OurUsers;
+import com.serverless.platformselector.enums.CloudProvider;
+import com.serverless.platformselector.service.AuthenticatedUserService;
+import com.serverless.platformselector.service.ProviderCredentialsService;
 import jakarta.validation.Valid;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/credentials")
-@Tag(name = "Credentials Management", description = "APIs for managing user credentials")
 public class CredentialsController {
-    
-    private static final Logger logger = LoggerFactory.getLogger(CredentialsController.class);
-    
-    @Autowired
-    private UserCredentialsService userCredentialsService;
-    
-    @PostMapping
-    @Operation(summary = "Save or update credentials", description = "Save or update user credentials for a platform")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Credentials saved successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid input data"),
-        @ApiResponse(responseCode = "404", description = "Platform not found"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
-    public ResponseEntity<Map<String, String>> saveCredentials(@Valid @RequestBody UserCredentialDTO credentialDTO) {
-        logger.info("POST /api/credentials - Saving credentials for user: {} and platform: {}", 
-                   credentialDTO.getUserId(), credentialDTO.getPlatformId());
-        
-        userCredentialsService.saveOrUpdateCredentials(credentialDTO);
-        
+
+    private final ProviderCredentialsService providerCredentialsService;
+    private final AuthenticatedUserService authenticatedUserService;
+
+    public CredentialsController(
+            ProviderCredentialsService providerCredentialsService,
+            AuthenticatedUserService authenticatedUserService) {
+        this.providerCredentialsService = providerCredentialsService;
+        this.authenticatedUserService = authenticatedUserService;
+    }
+
+    @PutMapping("/{provider}")
+    public ResponseEntity<Map<String, String>> saveCredentials(
+            @PathVariable CloudProvider provider,
+            @Valid @RequestBody ProviderCredentialsRequestDTO credentialDTO,
+            Authentication authentication) {
+        OurUsers owner = authenticatedUserService.requireCurrentUser(authentication);
+        providerCredentialsService.saveCredentials(owner.getId(), provider, credentialDTO.getEntries());
         return ResponseEntity.ok(Map.of("message", "Credentials saved successfully"));
+    }
+
+    @GetMapping("/{provider}")
+    public ResponseEntity<ProviderCredentialsRequestDTO> getCredentials(
+            @PathVariable CloudProvider provider,
+            Authentication authentication) {
+        OurUsers owner = authenticatedUserService.requireCurrentUser(authentication);
+        ProviderCredentialsRequestDTO response = new ProviderCredentialsRequestDTO();
+        response.setEntries(providerCredentialsService.getCredentials(owner.getId(), provider));
+        return ResponseEntity.ok(response);
     }
 }

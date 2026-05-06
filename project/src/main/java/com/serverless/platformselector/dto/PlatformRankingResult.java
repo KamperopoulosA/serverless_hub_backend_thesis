@@ -1,6 +1,6 @@
 package com.serverless.platformselector.dto;
 
-import com.serverless.platformselector.util.PlatformType;
+import com.serverless.platformselector.enums.CloudProvider;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -11,6 +11,6 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 public class PlatformRankingResult {
-    private PlatformType platformType;
+    private CloudProvider platformType;
     private List<PlatformDTO> rankedPlatforms;
 }
